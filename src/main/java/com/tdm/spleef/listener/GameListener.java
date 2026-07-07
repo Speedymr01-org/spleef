@@ -51,12 +51,11 @@ public class GameListener implements Listener {
         SpleefGame spleefGame = game.get();
         SpleefGame.GameState state = spleefGame.getState();
 
-        // Freeze players in lobby — only allow looking around
+        // Freeze players in lobby — prevent horizontal movement (X/Z), allow Y (falling)
         if (state == SpleefGame.GameState.WAITING || state == SpleefGame.GameState.COUNTDOWN) {
             Location from = event.getFrom();
             Location to = event.getTo();
-            // Cancel if actual position changed (x,y,z), not just rotation (yaw/pitch)
-            if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
+            if (from.getX() != to.getX() || from.getZ() != to.getZ()) {
                 event.setCancelled(true);
             }
             return;

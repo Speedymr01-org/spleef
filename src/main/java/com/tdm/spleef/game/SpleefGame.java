@@ -104,14 +104,13 @@ public class SpleefGame {
             arena.fillFloor();
         }
 
-        // Place a glass block under the player so they have a platform to stand on
-        Location glassLoc = new Location(spawn.getWorld(), spawn.getBlockX(), arena.getMinY(), spawn.getBlockZ());
-        if (arena.isWithinBounds(glassLoc)) {
-            Block glassBlock = glassLoc.getBlock();
-            if (glassBlock.getType() != Material.GLASS) {
-                glassBlock.setType(Material.GLASS);
-                glassBlock.getState().update(false, false);
-            }
+        // Place a glass block directly below the spawn point
+        // Only if there's a drop (the block below spawn is air)
+        Location glassLoc = spawn.clone().subtract(0, 1, 0);
+        Block below = glassLoc.getBlock();
+        if (below.getType() == Material.AIR) {
+            below.setType(Material.GLASS);
+            below.getState().update(false, false);
             playerGlass.put(player.getUniqueId(), glassLoc.clone());
         }
 
