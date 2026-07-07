@@ -6,13 +6,16 @@ import com.tdm.spleef.game.SpleefGame;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Snowball;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.util.Vector;
 
 import java.util.Optional;
 
@@ -75,6 +78,23 @@ public class GameListener implements Listener {
                 }
             }
         }
+    }
+
+    @EventHandler
+    public void onSnowballHit(ProjectileHitEvent event) {
+        if (!(event.getEntity() instanceof Snowball snowball)) return;
+        if (!(event.getHitEntity() instanceof Player victim)) return;
+        if (!(snowball.getShooter() instanceof Player shooter)) return;
+
+        Optional<SpleefGame> game = gameManager.getPlayerGame(victim);
+        if (game.isEmpty()) return;
+        if (game.get().getState() != SpleefGame.GameState.ACTIVE) return;
+
+        // Apply horizontal knockback away from the shooter
+        Vector dir = victim.getLocation().toVector().subtract(shooter.getLocation().toVector());
+        dir.setY(0);
+        dir.normalize().multiply(1.2);
+        victim.setVelocity(victim.getVelocity().add(dir));
     }
 
     @EventHandler
