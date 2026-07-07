@@ -172,7 +172,7 @@ public class SpleefGame {
         plugin.getGameManager().removeGame(this);
     }
 
-    public void breakBlock(Block block) {
+    public void breakBlock(Player player, Block block) {
         if (state != GameState.ACTIVE) return;
         if (!arena.isWithinFloor(block.getLocation())) return;
 
@@ -180,6 +180,9 @@ public class SpleefGame {
             block.setType(Material.AIR);
             block.getState().update(false, false);
             brokenBlocks.add(block.getLocation());
+
+            // Give the player a snowball for every block broken
+            player.getInventory().addItem(new ItemStack(Material.SNOWBALL));
         }
     }
 

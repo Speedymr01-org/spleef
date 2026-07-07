@@ -13,6 +13,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 
 import java.util.Optional;
 
@@ -39,7 +40,7 @@ public class GameListener implements Listener {
             SpleefGame spleefGame = game.get();
             if (spleefGame.getArena().isWithinFloor(event.getBlock().getLocation())) {
                 event.setCancelled(false);
-                spleefGame.breakBlock(event.getBlock());
+                spleefGame.breakBlock(player, event.getBlock());
             }
         }
     }
@@ -85,5 +86,17 @@ public class GameListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         gameManager.getPlayerGame(player).ifPresent(game -> game.removePlayer(player));
+    }
+
+    @EventHandler
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        Player player = event.getPlayer();
+        gameManager.getPlayerGame(player).ifPresent(game -> {
+            // If they're still tracked but were eliminated, keep them in spectator at the arena
+            if (!game.getAlivePlayers().contains(player) && game.getPlayers().contains(player)) {
+                event.setRespawnLocation(game.getArena().getSpawnLocation(0));
+                player.setGameMode(GameMode.SPECTATOR);
+            }
+        });
     }
 }
