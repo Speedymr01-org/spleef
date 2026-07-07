@@ -228,11 +228,23 @@ public class SpleefCommand implements TabExecutor {
             gameManager.getArena(arenaName).ifPresentOrElse(arena -> {
                 try {
                     int needed = Integer.parseInt(args[3]);
+                    if (needed < 2) {
+                        sender.sendMessage(Component.text("Minimum players needed is 2!", NamedTextColor.RED));
+                        return;
+                    }
+                    int oldNeeded = arena.getMinPlayers();
                     arena.setMinPlayers(needed);
                     gameManager.saveArena(arena);
-                    sender.sendMessage(Component.text("Players needed for '" + arenaName + "' set to " + needed + ".", NamedTextColor.GREEN));
+                    sender.sendMessage(Component.text("Players needed for '" + arenaName + "' changed from " + oldNeeded + " to " + needed + ".", NamedTextColor.GREEN));
+
+                    // Warn if count doesn't match the game type
+                    String type = arena.getGameType();
+                    Integer typeMin = java.util.Map.of("ffa", 2, "solos", 2, "duos", 4, "trios", 6, "quads", 8).get(type);
+                    if (typeMin != null && needed != typeMin) {
+                        sender.sendMessage(Component.text("Warning: " + needed + " doesn't match " + type + " type (" + typeMin + ").", NamedTextColor.YELLOW));
+                    }
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(Component.text("Invalid number: " + args[3], NamedTextColor.RED));
+                    sender.sendMessage(Component.text("Invalid number: " + args[3] + ". Use a positive number (minimum 2).", NamedTextColor.RED));
                 }
             }, () -> {
                 sender.sendMessage(Component.text("Arena '" + arenaName + "' not fully set up yet! Set its bounds first.", NamedTextColor.RED));
@@ -334,7 +346,7 @@ public class SpleefCommand implements TabExecutor {
                 if (gs == GameState.ACTIVE) {
                     // Match in progress - red
                     sender.sendMessage(Component.text("- " + arena.getName() + " [MATCH IN PROGRESS]", NamedTextColor.RED)
-                            .append(Component.text(" (" + game.getAlivePlayers().size() + "/" + game.getPlayers().size() + ")", NamedTextColor.GRAY))
+                            .append(Component.text(" (" + game.getAlivePlayers().size() + "/" + game.getStartedPlayerCount() + " left)", NamedTextColor.GRAY))
                             .append(Component.text(" [" + arena.getGameType().toUpperCase() + "]", NamedTextColor.GRAY)));
                 } else {
                     // Waiting for players - yellow

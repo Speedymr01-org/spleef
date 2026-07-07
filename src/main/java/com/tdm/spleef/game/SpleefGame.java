@@ -25,6 +25,7 @@ public class SpleefGame {
     private final Set<Location> brokenBlocks;
     private GameState state;
     private int taskId;
+    private int startedPlayerCount;
 
     public enum GameState {
         WAITING, COUNTDOWN, ACTIVE, FINISHED
@@ -38,6 +39,7 @@ public class SpleefGame {
         this.brokenBlocks = new HashSet<>();
         this.state = GameState.WAITING;
         this.taskId = -1;
+        this.startedPlayerCount = 0;
     }
 
     public Arena getArena() {
@@ -54,6 +56,10 @@ public class SpleefGame {
 
     public GameState getState() {
         return state;
+    }
+
+    public int getStartedPlayerCount() {
+        return startedPlayerCount;
     }
 
     public boolean addPlayer(Player player) {
@@ -85,9 +91,17 @@ public class SpleefGame {
     }
 
     public void start() {
+        if (state != GameState.WAITING) {
+            broadcast(Component.text("Game cannot be started in its current state!", NamedTextColor.RED));
+            return;
+        }
+        if (players.isEmpty()) {
+            broadcast(Component.text("No players in the game!", NamedTextColor.RED));
+            return;
+        }
         int needed = arena.getMinPlayers();
         if (players.size() < needed) {
-            broadcast(Component.text("Need at least " + needed + " players to start!", NamedTextColor.RED));
+            broadcast(Component.text("Need at least " + needed + " players to start (have " + players.size() + ")!", NamedTextColor.RED));
             return;
         }
 
@@ -102,6 +116,7 @@ public class SpleefGame {
 
     private void beginGame() {
         state = GameState.ACTIVE;
+        startedPlayerCount = players.size();
         broadcast(Component.text("GO! Break the snow beneath other players!", NamedTextColor.GOLD));
 
         // Fill the arena floor with snow blocks
