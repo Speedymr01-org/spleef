@@ -7,7 +7,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -25,6 +27,8 @@ public class SpleefGame {
     private final List<GameTeam> teams;
     private final Set<Location> brokenBlocks;
     private final Map<UUID, Location> playerGlass;
+    private final Map<UUID, Location> previousLocations;
+    private Map<Location, BlockData> arenaSnapshot;
     private GameState state;
     private int taskId;
     private int startedPlayerCount;
@@ -40,6 +44,8 @@ public class SpleefGame {
         this.alivePlayers = new ArrayList<>();
         this.brokenBlocks = new HashSet<>();
         this.playerGlass = new HashMap<>();
+        this.previousLocations = new HashMap<>();
+        this.arenaSnapshot = null;
         this.teams = new ArrayList<>();
         this.state = GameState.WAITING;
         this.taskId = -1;
@@ -92,6 +98,9 @@ public class SpleefGame {
 
         boolean wasEmpty = players.isEmpty();
 
+        // Save the player's current location so we can return them there on leave/game end
+        previousLocations.put(player.getUniqueId(), player.getLocation().clone());
+
         players.add(player);
         alivePlayers.add(player);
         Location spawn = arena.getSpawnLocation(players.size() - 1);
@@ -128,6 +137,9 @@ public class SpleefGame {
         // Remove the player's glass block if present
         removePlayerGlass(player);
 
+        // Teleport the player back to where they were before joining
+        teleportBack(player);
+
         player.sendMessage(Component.text("You left the Spleef game.", NamedTextColor.GRAY));
         broadcast(Component.text(player.getName() + " left the game.", NamedTextColor.YELLOW));
 
@@ -156,6 +168,44 @@ public class SpleefGame {
             }
         }
         playerGlass.clear();
+    }
+
+    private void snapshotArena() {
+        World world = arena.getWorld();
+        arenaSnapshot = new HashMap<>();
+        for (int x = arena.getMinX(); x <= arena.getMaxX(); x++) {
+            for (int y = arena.getMinY(); y <= arena.getMaxY(); y++) {
+                for (int z = arena.getMinZ(); z <= arena.getMaxZ(); z++) {
+                    Location loc = new Location(world, x, y, z);
+                    arenaSnapshot.put(loc, loc.getBlock().getBlockData());
+                }
+            }
+        }
+    }
+
+    private void restoreArenaSnapshot() {
+        if (arenaSnapshot == null) return;
+        for (Map.Entry<Location, BlockData> entry : arenaSnapshot.entrySet()) {
+            Block block = entry.getKey().getBlock();
+            block.setBlockData(entry.getValue(), false);
+        }
+        arenaSnapshot = null;
+    }
+
+    private void teleportBack(Player player) {
+        Location prev = previousLocations.remove(player.getUniqueId());
+        if (prev != null) {
+            player.teleport(prev);
+        } else {
+            player.teleport(plugin.getServer().getWorlds().get(0).getSpawnLocation());
+        }
+    }
+
+    private void teleportAllBack() {
+        for (Player player : players) {
+            teleportBack(player);
+        }
+        previousLocations.clear();
     }
 
     public void start() {
@@ -218,10 +268,13 @@ public class SpleefGame {
         // Remove glass platforms so players drop onto the snow
         removeAllGlassBlocks();
 
-        broadcast(Component.text("GO! Break the snow beneath other players!", NamedTextColor.GOLD));
-
         // Fill the arena floor with snow blocks
         arena.fillFloor();
+
+        // Snapshot the entire arena volume so we can fully reset it later
+        snapshotArena();
+
+        broadcast(Component.text("GO! Break the snow beneath other players!", NamedTextColor.GOLD));
 
         for (Player player : players) {
             player.setGameMode(GameMode.SURVIVAL);
@@ -291,17 +344,14 @@ public class SpleefGame {
             broadcast(Component.text("Game ended! No winners this round.", NamedTextColor.GRAY));
         }
 
-        // Restore broken blocks after a delay
-        plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, this::restoreBlocks, 100L);
-
-        // Kick all players out after 5 seconds
+        // Restore the arena to pre-game state and kick players out
         plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
             for (Player player : players) {
                 player.setGameMode(GameMode.SURVIVAL);
-                player.teleport(plugin.getServer().getWorlds().get(0).getSpawnLocation());
                 player.getInventory().clear();
             }
-            removeAllGlassBlocks();
+            teleportAllBack();
+            restoreArenaSnapshot();
             players.clear();
             alivePlayers.clear();
             teams.clear();
@@ -318,13 +368,11 @@ public class SpleefGame {
             broadcast(Component.text("Game has been stopped.", NamedTextColor.RED));
             for (Player player : players) {
                 player.setGameMode(GameMode.SURVIVAL);
-                player.teleport(plugin.getServer().getWorlds().get(0).getSpawnLocation());
                 player.getInventory().clear();
             }
         }
-        restoreBlocks();
-        removeAllGlassBlocks();
-        arena.clearFloor();
+        teleportAllBack();
+        restoreArenaSnapshot();
         players.clear();
         alivePlayers.clear();
         teams.clear();
