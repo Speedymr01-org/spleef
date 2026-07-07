@@ -33,13 +33,13 @@ public class GameListener implements Listener {
         Optional<SpleefGame> game = gameManager.getPlayerGame(player);
         if (game.isEmpty()) return;
 
+        // Cancel all block breaking during game (no drops)
         event.setCancelled(true);
 
-        // Only allow breaking snow blocks in the arena floor
+        // Manually break snow blocks in the arena floor + give snowball
         if (event.getBlock().getType() == Material.SNOW_BLOCK) {
             SpleefGame spleefGame = game.get();
             if (spleefGame.getArena().isWithinFloor(event.getBlock().getLocation())) {
-                event.setCancelled(false);
                 spleefGame.breakBlock(player, event.getBlock());
             }
         }
