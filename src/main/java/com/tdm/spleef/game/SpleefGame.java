@@ -103,6 +103,9 @@ public class SpleefGame {
         state = GameState.ACTIVE;
         broadcast(Component.text("GO! Break the snow beneath other players!", NamedTextColor.GOLD));
 
+        // Fill the arena floor with snow blocks
+        arena.fillFloor();
+
         for (Player player : players) {
             player.setGameMode(GameMode.SURVIVAL);
             player.getInventory().clear();
@@ -174,7 +177,7 @@ public class SpleefGame {
 
     public void breakBlock(Player player, Block block) {
         if (state != GameState.ACTIVE) return;
-        if (!arena.isWithinFloor(block.getLocation())) return;
+        if (!arena.isWithinBounds(block.getLocation())) return;
 
         if (block.getType() != Material.AIR) {
             block.setType(Material.AIR);

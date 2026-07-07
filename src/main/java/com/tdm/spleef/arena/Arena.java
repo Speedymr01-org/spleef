@@ -1,9 +1,10 @@
 package com.tdm.spleef.arena;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +27,7 @@ public class Arena {
         this.minY = Math.min(minY, maxY);
         this.minZ = Math.min(minZ, maxZ);
         this.maxX = Math.max(minX, maxX);
-        this.maxY = Math.min(minY + 1, Math.max(minY, maxY)); // floor is at minY
+        this.maxY = Math.max(minY, maxY); // full 3D volume
         this.maxZ = Math.max(minZ, maxZ);
         this.spawnLocations = new ArrayList<>();
     }
@@ -40,9 +41,32 @@ public class Arena {
     }
 
     /**
-     * Checks if a location is within the arena floor bounds.
+     * Checks if a location is within the full 3D arena volume.
      */
-    public boolean isWithinFloor(Location location) {
+    public boolean isWithinBounds(Location location) {
+        if (!location.getWorld().equals(world)) return false;
+        int x = location.getBlockX();
+        int y = location.getBlockY();
+        int z = location.getBlockZ();
+        return x >= minX && x <= maxX &&
+               y >= minY && y <= maxY &&
+               z >= minZ && z <= maxZ;
+    }
+
+    /**
+     * Checks if a location is on the floor level (X/Z only).
+     */
+    public boolean isOnFloor(Location location) {
+        if (!location.getWorld().equals(world)) return false;
+        int x = location.getBlockX();
+        int z = location.getBlockZ();
+        return x >= minX && x <= maxX && z >= minZ && z <= maxZ && location.getBlockY() == minY;
+    }
+
+    /**
+     * Checks if a location is within the horizontal (X/Z) bounds of the arena.
+     */
+    public boolean isWithinHorizontalBounds(Location location) {
         if (!location.getWorld().equals(world)) return false;
         int x = location.getBlockX();
         int z = location.getBlockZ();
@@ -50,10 +74,19 @@ public class Arena {
     }
 
     /**
-     * Checks if a location is on the floor level.
+     * Fills the bottom Y layer of the arena with snow blocks.
      */
-    public boolean isOnFloor(Location location) {
-        return isWithinFloor(location) && location.getBlockY() == minY;
+    public void fillFloor() {
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                Location loc = new Location(world, x, minY, z);
+                Block block = loc.getBlock();
+                if (block.getType() == Material.AIR) {
+                    block.setType(Material.SNOW_BLOCK);
+                    block.getState().update(false, false);
+                }
+            }
+        }
     }
 
     public Location getSpawnLocation(int index) {

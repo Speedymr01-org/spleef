@@ -4,13 +4,11 @@ import com.tdm.spleef.SpleefPlugin;
 import com.tdm.spleef.game.GameManager;
 import com.tdm.spleef.game.SpleefGame;
 import org.bukkit.GameMode;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -33,15 +31,13 @@ public class GameListener implements Listener {
         Optional<SpleefGame> game = gameManager.getPlayerGame(player);
         if (game.isEmpty()) return;
 
-        // Cancel all block breaking during game (no drops)
+        // Cancel all block breaking during game (no natural drops)
         event.setCancelled(true);
 
-        // Manually break snow blocks in the arena floor + give snowball
-        if (event.getBlock().getType() == Material.SNOW_BLOCK) {
-            SpleefGame spleefGame = game.get();
-            if (spleefGame.getArena().isWithinFloor(event.getBlock().getLocation())) {
-                spleefGame.breakBlock(player, event.getBlock());
-            }
+        // Any block broken within the arena volume gets removed + gives a snowball
+        SpleefGame spleefGame = game.get();
+        if (spleefGame.getArena().isWithinBounds(event.getBlock().getLocation())) {
+            spleefGame.breakBlock(player, event.getBlock());
         }
     }
 
@@ -59,7 +55,7 @@ public class GameListener implements Listener {
 
         // Cancel movement if they try to walk outside the arena
         if (spleefGame.getState() == SpleefGame.GameState.ACTIVE) {
-            if (!spleefGame.getArena().isWithinFloor(event.getTo())) {
+            if (!spleefGame.getArena().isWithinHorizontalBounds(event.getTo())) {
                 // Don't cancel if they're already eliminated (spectating)
                 if (spleefGame.getAlivePlayers().contains(player)) {
                     event.setCancelled(true);
