@@ -119,6 +119,13 @@ public class SpleefGame {
             return;
         }
 
+        // For team modes, player count must be a multiple of team size
+        int teamSize = getTeamSizeForType();
+        if (teamSize > 1 && players.size() % teamSize != 0) {
+            broadcast(Component.text("Player count (" + players.size() + ") must be a multiple of " + teamSize + " for " + arena.getGameType() + " mode!", NamedTextColor.RED));
+            return;
+        }
+
         state = GameState.COUNTDOWN;
         broadcast(Component.text("Game starting in 5 seconds!", NamedTextColor.GREEN));
 
