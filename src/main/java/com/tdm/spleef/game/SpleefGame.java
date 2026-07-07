@@ -81,11 +81,20 @@ public class SpleefGame {
             player.sendMessage(Component.text("You are already in the game!", NamedTextColor.RED));
             return false;
         }
+
+        boolean wasEmpty = players.isEmpty();
+
         players.add(player);
         alivePlayers.add(player);
         player.teleport(arena.getSpawnLocation(players.size() - 1));
         player.sendMessage(Component.text("You joined the Spleef game!", NamedTextColor.GREEN));
         broadcast(Component.text(player.getName() + " joined the game! (" + players.size() + " players)", NamedTextColor.YELLOW));
+
+        // Fill the arena floor with snow when the first player joins
+        if (wasEmpty) {
+            arena.fillFloor();
+        }
+
         return true;
     }
 
@@ -259,6 +268,7 @@ public class SpleefGame {
             }
         }
         restoreBlocks();
+        arena.clearFloor();
         players.clear();
         alivePlayers.clear();
         teams.clear();

@@ -99,6 +99,22 @@ public class Arena {
         }
     }
 
+    /**
+     * Clears all snow blocks from the floor (sets them back to air).
+     */
+    public void clearFloor() {
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                Location loc = new Location(world, x, minY, z);
+                Block block = loc.getBlock();
+                if (block.getType() == Material.SNOW_BLOCK) {
+                    block.setType(Material.AIR);
+                    block.getState().update(false, false);
+                }
+            }
+        }
+    }
+
     public Location getSpawnLocation(int index) {
         if (spawnLocations.isEmpty()) {
             // Default spawn: center of arena
