@@ -7,9 +7,7 @@ import com.tdm.spleef.game.SpleefGame;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -25,7 +23,7 @@ public class SpleefCommand implements TabExecutor {
     private final SpleefPlugin plugin;
     private final GameManager gameManager;
 
-    private static final List<String> SUB_COMMANDS = Arrays.asList("join", "leave", "start", "stop", "setarena", "list", "info");
+    private static final List<String> SUB_COMMANDS = Arrays.asList("join", "leave", "start", "stop", "arena-create", "setarena", "list", "info");
 
     public SpleefCommand(SpleefPlugin plugin, GameManager gameManager) {
         this.plugin = plugin;
@@ -35,7 +33,7 @@ public class SpleefCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usage: /spleef <join|leave|start|stop|setarena|list|info>", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Usage: /spleef <join|leave|start|stop|arena-create|setarena|list|info>", NamedTextColor.RED));
             return true;
         }
 
@@ -48,6 +46,8 @@ public class SpleefCommand implements TabExecutor {
                 return handleStart(sender, args);
             case "stop":
                 return handleStop(sender, args);
+            case "arena-create":
+                return handleArenaCreate(sender, args);
             case "setarena":
                 return handleSetArena(sender, args);
             case "list":
@@ -158,6 +158,28 @@ public class SpleefCommand implements TabExecutor {
         return true;
     }
 
+    private boolean handleArenaCreate(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("spleef.admin")) {
+            sender.sendMessage(Component.text("You don't have permission!", NamedTextColor.RED));
+            return true;
+        }
+
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /spleef arena-create <name>", NamedTextColor.RED));
+            return true;
+        }
+
+        String arenaName = args[1];
+        if (gameManager.createPendingArena(arenaName)) {
+            sender.sendMessage(Component.text("Arena '" + arenaName + "' created!", NamedTextColor.GREEN));
+            sender.sendMessage(Component.text("Now set its bounds: /spleef setarena " + arenaName + " pos1", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Then: /spleef setarena " + arenaName + " pos2", NamedTextColor.YELLOW));
+        } else {
+            sender.sendMessage(Component.text("Arena '" + arenaName + "' already exists!", NamedTextColor.RED));
+        }
+        return true;
+    }
+
     @SuppressWarnings("deprecation")
     private boolean handleSetArena(CommandSender sender, String[] args) {
         if (!sender.hasPermission("spleef.admin")) {
@@ -173,22 +195,14 @@ public class SpleefCommand implements TabExecutor {
         String arenaName = args[1];
         Player player = (sender instanceof Player) ? (Player) sender : null;
 
+        // Must create the arena with arena-create first
+        if (!gameManager.isArenaRegistered(arenaName)) {
+            sender.sendMessage(Component.text("Arena '" + arenaName + "' not found! Use /spleef arena-create " + arenaName + " first.", NamedTextColor.RED));
+            return true;
+        }
+
         if (args.length == 2) {
-            // Create or teleport to arena
-            if (gameManager.hasArena(arenaName)) {
-                sender.sendMessage(Component.text("Arena '" + arenaName + "' already exists!", NamedTextColor.RED));
-                return true;
-            }
-
-            if (player == null) {
-                sender.sendMessage(Component.text("Must be a player to set positions!", NamedTextColor.RED));
-                return true;
-            }
-
-            // Start selection mode
-            plugin.getServer().sendMessage(
-                    Component.text("Right-click two opposite corners with a stick to set the arena boundaries.",
-                            NamedTextColor.GREEN));
+            sender.sendMessage(Component.text("Usage: /spleef setarena " + arenaName + " <pos1|pos2|addspawn>", NamedTextColor.RED));
             return true;
         }
 
@@ -243,7 +257,8 @@ public class SpleefCommand implements TabExecutor {
 
         Arena arena = new Arena(name, world, minX, minY, minZ, maxX, maxY, maxZ);
         gameManager.saveArena(arena);
-        sender.sendMessage(Component.text("Arena '" + name + "' created!", NamedTextColor.GREEN));
+        gameManager.removePending(name);
+        sender.sendMessage(Component.text("Arena '" + name + "' bounds set!", NamedTextColor.GREEN));
         sender.sendMessage(Component.text("Use /spleef setarena " + name + " addspawn to add spawn points.", NamedTextColor.YELLOW));
     }
 
@@ -317,6 +332,9 @@ public class SpleefCommand implements TabExecutor {
                     .collect(Collectors.toList());
         }
         if (args.length == 2) {
+            if (args[0].equalsIgnoreCase("arena-create")) {
+                return new ArrayList<>();
+            }
             if (args[0].equalsIgnoreCase("join") || args[0].equalsIgnoreCase("info")) {
                 return gameManager.getArenas().stream()
                         .map(Arena::getName)
