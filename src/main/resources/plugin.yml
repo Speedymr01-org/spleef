@@ -1,0 +1,17 @@
+name: Spleef
+version: ${project.version}
+main: com.tdm.spleef.SpleefPlugin
+api-version: '1.21'
+author: Speedymr01
+description: Classic Spleef minigame for Paper
+
+commands:
+  spleef:
+    description: Main Spleef command
+    usage: /<command> [join|leave|start|stop|setarena]
+    aliases: [sp]
+
+permissions:
+  spleef.admin:
+    description: Allows using admin Spleef commands
+    default: op
