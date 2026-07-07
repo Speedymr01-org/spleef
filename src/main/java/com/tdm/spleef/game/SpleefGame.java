@@ -286,6 +286,16 @@ public class SpleefGame {
         }
     }
 
+    /**
+     * Checks if two players are on the same team in a team game.
+     */
+    public boolean arePlayersSameTeam(Player a, Player b) {
+        if (!isTeamGame()) return false;
+        GameTeam teamA = GameTeam.getPlayerTeam(teams, a);
+        GameTeam teamB = GameTeam.getPlayerTeam(teams, b);
+        return teamA != null && teamA == teamB;
+    }
+
     private int getTeamSizeForType() {
         switch (arena.getGameType()) {
             case "duos": return 2;
@@ -383,6 +393,19 @@ public class SpleefGame {
     public void breakBlock(Player player, Block block) {
         if (state != GameState.ACTIVE) return;
         if (!arena.isWithinBounds(block.getLocation())) return;
+
+        // In team games, prevent breaking blocks directly below a teammate
+        if (isTeamGame()) {
+            int bx = block.getX(), by = block.getY(), bz = block.getZ();
+            for (Player teammate : players) {
+                if (teammate == player) continue;
+                if (!arePlayersSameTeam(player, teammate)) continue;
+                Location loc = teammate.getLocation();
+                if (loc.getBlockX() == bx && loc.getBlockY() == by + 1 && loc.getBlockZ() == bz) {
+                    return; // Block is directly below a teammate
+                }
+            }
+        }
 
         if (block.getType() != Material.AIR) {
             block.setType(Material.AIR);

@@ -86,9 +86,15 @@ public class GameListener implements Listener {
         if (!(event.getHitEntity() instanceof Player victim)) return;
         if (!(snowball.getShooter() instanceof Player shooter)) return;
 
-        Optional<SpleefGame> game = gameManager.getPlayerGame(victim);
-        if (game.isEmpty()) return;
-        if (game.get().getState() != SpleefGame.GameState.ACTIVE) return;
+        // Both players must be in the same active game
+        Optional<SpleefGame> optGame = gameManager.getPlayerGame(victim);
+        if (optGame.isEmpty()) return;
+        SpleefGame game = optGame.get();
+        if (game.getState() != SpleefGame.GameState.ACTIVE) return;
+        if (!game.getPlayers().contains(shooter)) return;
+
+        // Don't apply knockback if they're on the same team
+        if (game.arePlayersSameTeam(shooter, victim)) return;
 
         // Apply horizontal knockback away from the shooter
         Vector dir = victim.getLocation().toVector().subtract(shooter.getLocation().toVector());
