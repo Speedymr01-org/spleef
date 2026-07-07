@@ -4,6 +4,7 @@ import com.tdm.spleef.SpleefPlugin;
 import com.tdm.spleef.arena.Arena;
 import com.tdm.spleef.game.GameManager;
 import com.tdm.spleef.game.SpleefGame;
+import com.tdm.spleef.game.SpleefGame.GameState;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
@@ -285,11 +286,18 @@ public class SpleefCommand implements TabExecutor {
         // Fully created arenas
         for (Arena arena : gameManager.getArenas()) {
             anyFound = true;
-            boolean hasActive = gameManager.getGame(arena.getName()).isPresent();
-            if (hasActive) {
-                SpleefGame game = gameManager.getGame(arena.getName()).get();
-                sender.sendMessage(Component.text("- " + arena.getName() + " [MATCH IN PROGRESS]", NamedTextColor.RED)
-                        .append(Component.text(" (" + game.getAlivePlayers().size() + "/" + game.getPlayers().size() + ")", NamedTextColor.GRAY)));
+            java.util.Optional<SpleefGame> optGame = gameManager.getGame(arena.getName());
+            if (optGame.isPresent()) {
+                SpleefGame game = optGame.get();
+                GameState gs = game.getState();
+                if (gs == GameState.ACTIVE) {
+                    // Match in progress - red
+                    sender.sendMessage(Component.text("- " + arena.getName() + " [MATCH IN PROGRESS]", NamedTextColor.RED)
+                            .append(Component.text(" (" + game.getAlivePlayers().size() + "/" + game.getPlayers().size() + ")", NamedTextColor.GRAY)));
+                } else {
+                    // Waiting for players - yellow
+                    sender.sendMessage(Component.text("- " + arena.getName() + " [" + game.getPlayers().size() + "/2]", NamedTextColor.YELLOW));
+                }
             } else {
                 sender.sendMessage(Component.text("- " + arena.getName() + " [READY]", NamedTextColor.GREEN));
             }
