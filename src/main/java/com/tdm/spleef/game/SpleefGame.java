@@ -95,6 +95,10 @@ public class SpleefGame {
             arena.fillFloor();
         }
 
+        // Freeze the player in place (hovering, no falling)
+        player.setAllowFlight(true);
+        player.setFlying(true);
+
         return true;
     }
 
@@ -135,6 +139,12 @@ public class SpleefGame {
             return;
         }
 
+        // Require enough spawn points — need at least `needed` spawns for all players
+        if (!arena.getSpawnLocations().isEmpty() && arena.getSpawnLocations().size() < needed) {
+            broadcast(Component.text("Arena needs at least " + needed + " spawn points (has " + arena.getSpawnLocations().size() + ")!", NamedTextColor.RED));
+            return;
+        }
+
         state = GameState.COUNTDOWN;
         broadcast(Component.text("Game starting in 5 seconds!", NamedTextColor.GREEN));
 
@@ -171,6 +181,8 @@ public class SpleefGame {
 
         for (Player player : players) {
             player.setGameMode(GameMode.SURVIVAL);
+            player.setAllowFlight(false);
+            player.setFlying(false);
             player.getInventory().clear();
             player.getInventory().addItem(new ItemStack(Material.DIAMOND_SHOVEL));
             player.setFoodLevel(20);
@@ -263,6 +275,8 @@ public class SpleefGame {
             broadcast(Component.text("Game has been stopped.", NamedTextColor.RED));
             for (Player player : players) {
                 player.setGameMode(GameMode.SURVIVAL);
+                player.setAllowFlight(false);
+                player.setFlying(false);
                 player.teleport(plugin.getServer().getWorlds().get(0).getSpawnLocation());
                 player.getInventory().clear();
             }

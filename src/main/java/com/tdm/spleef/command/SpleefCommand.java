@@ -283,7 +283,9 @@ public class SpleefCommand implements TabExecutor {
             gameManager.getArena(arenaName).ifPresentOrElse(arena -> {
                 arena.addSpawnLocation(player.getLocation());
                 gameManager.saveArena(arena);
-                player.sendMessage(Component.text("Spawn location added to arena '" + arenaName + "'.", NamedTextColor.GREEN));
+                int count = arena.getSpawnLocations().size();
+                int needed = arena.getMinPlayers();
+                player.sendMessage(Component.text("Spawn location (" + count + "/" + needed + ") added to arena '" + arenaName + "'.", NamedTextColor.GREEN));
             }, () -> {
                 sender.sendMessage(Component.text("Arena '" + arenaName + "' not fully set up yet! Set its bounds first.", NamedTextColor.RED));
             });

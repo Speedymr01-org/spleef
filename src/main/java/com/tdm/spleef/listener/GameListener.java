@@ -4,6 +4,7 @@ import com.tdm.spleef.SpleefPlugin;
 import com.tdm.spleef.game.GameManager;
 import com.tdm.spleef.game.SpleefGame;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -47,14 +48,27 @@ public class GameListener implements Listener {
         Optional<SpleefGame> game = gameManager.getPlayerGame(player);
         if (game.isEmpty()) return;
 
-        // Check if player fell below the arena floor (into the void)
         SpleefGame spleefGame = game.get();
+        SpleefGame.GameState state = spleefGame.getState();
+
+        // Freeze players in lobby — only allow looking around
+        if (state == SpleefGame.GameState.WAITING || state == SpleefGame.GameState.COUNTDOWN) {
+            Location from = event.getFrom();
+            Location to = event.getTo();
+            // Cancel if actual position changed (x,y,z), not just rotation (yaw/pitch)
+            if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
+                event.setCancelled(true);
+            }
+            return;
+        }
+
+        // Check if player fell below the arena floor (into the void)
         if (event.getTo().getY() < spleefGame.getArena().getMinY()) {
             spleefGame.eliminatePlayer(player);
         }
 
         // Cancel movement if they try to walk outside the arena
-        if (spleefGame.getState() == SpleefGame.GameState.ACTIVE) {
+        if (state == SpleefGame.GameState.ACTIVE) {
             if (!spleefGame.getArena().isWithinHorizontalBounds(event.getTo())) {
                 // Don't cancel if they're already eliminated (spectating)
                 if (spleefGame.getAlivePlayers().contains(player)) {
