@@ -14,11 +14,21 @@ import java.util.List;
  */
 public class Arena {
 
+    private static final java.util.Map<String, Integer> TYPE_PLAYER_MAP = java.util.Map.of(
+            "ffa", 2,
+            "solos", 2,
+            "duos", 4,
+            "trios", 6,
+            "quads", 8
+    );
+
     private final String name;
     private final World world;
     private final int minX, minY, minZ;
     private final int maxX, maxY, maxZ;
     private final List<Location> spawnLocations;
+    private int minPlayers = 2;
+    private String gameType = "ffa";
 
     public Arena(String name, World world, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
         this.name = name;
@@ -118,6 +128,8 @@ public class Arena {
         section.set("maxX", maxX);
         section.set("maxY", maxY);
         section.set("maxZ", maxZ);
+        section.set("min-players", minPlayers);
+        section.set("game-type", gameType);
 
         ConfigurationSection spawnsSection = section.createSection("spawns");
         int i = 0;
@@ -148,6 +160,8 @@ public class Arena {
         int maxZ = section.getInt("maxZ");
 
         Arena arena = new Arena(section.getName(), world, minX, minY, minZ, maxX, maxY, maxZ);
+        arena.setMinPlayers(section.getInt("min-players", 2));
+        arena.gameType = section.getString("game-type", "ffa");
 
         ConfigurationSection spawnsSection = section.getConfigurationSection("spawns");
         if (spawnsSection != null) {
@@ -168,6 +182,31 @@ public class Arena {
         }
 
         return arena;
+    }
+
+    public int getMinPlayers() { return minPlayers; }
+
+    public void setMinPlayers(int minPlayers) {
+        this.minPlayers = Math.max(2, minPlayers);
+    }
+
+    public String getGameType() { return gameType; }
+
+    /**
+     * Sets the game type and updates minPlayers accordingly.
+     * Returns true if the type is valid.
+     */
+    public boolean setGameType(String type) {
+        String lower = type.toLowerCase();
+        Integer needed = TYPE_PLAYER_MAP.get(lower);
+        if (needed == null) return false;
+        this.gameType = lower;
+        this.minPlayers = needed;
+        return true;
+    }
+
+    public static java.util.Set<String> getValidTypes() {
+        return TYPE_PLAYER_MAP.keySet();
     }
 
     public int getMinX() { return minX; }

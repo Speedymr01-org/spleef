@@ -165,7 +165,7 @@ public class SpleefCommand implements TabExecutor {
         }
 
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Usage: /spleef arena <create|pos1|pos2|addspawn> <name>", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Usage: /spleef arena <create|pos1|pos2|addspawn|type|players-needed> <name>", NamedTextColor.RED));
             return true;
         }
 
@@ -188,14 +188,55 @@ public class SpleefCommand implements TabExecutor {
             return true;
         }
 
-        // All other actions (pos1, pos2, addspawn) need a name and a player
+        // All other actions (pos1, pos2, addspawn, players-needed) need a name
         if (arenaName == null) {
-            sender.sendMessage(Component.text("Usage: /spleef arena " + action + " <name>", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Usage: /spleef arena " + action + " <name> [number]", NamedTextColor.RED));
             return true;
         }
 
         if (!gameManager.isArenaRegistered(arenaName)) {
             sender.sendMessage(Component.text("Arena '" + arenaName + "' not found! Use /spleef arena create " + arenaName + " first.", NamedTextColor.RED));
+            return true;
+        }
+
+        // type can be set from console
+        if (action.equalsIgnoreCase("type")) {
+            if (args.length < 4) {
+                sender.sendMessage(Component.text("Usage: /spleef arena type <name> <ffa|solos|duos|trios|quads>", NamedTextColor.RED));
+                return true;
+            }
+            String type = args[3].toLowerCase();
+            gameManager.getArena(arenaName).ifPresentOrElse(arena -> {
+                if (arena.setGameType(type)) {
+                    gameManager.saveArena(arena);
+                    sender.sendMessage(Component.text("Arena '" + arenaName + "' set to " + type + " (" + arena.getMinPlayers() + " players needed).", NamedTextColor.GREEN));
+                } else {
+                    sender.sendMessage(Component.text("Invalid type! Valid types: ffa, solos, duos, trios, quads", NamedTextColor.RED));
+                }
+            }, () -> {
+                sender.sendMessage(Component.text("Arena '" + arenaName + "' not fully set up yet! Set its bounds first.", NamedTextColor.RED));
+            });
+            return true;
+        }
+
+        // players-needed can be used from console
+        if (action.equalsIgnoreCase("players-needed")) {
+            if (args.length < 4) {
+                sender.sendMessage(Component.text("Usage: /spleef arena players-needed <name> <number>", NamedTextColor.RED));
+                return true;
+            }
+            gameManager.getArena(arenaName).ifPresentOrElse(arena -> {
+                try {
+                    int needed = Integer.parseInt(args[3]);
+                    arena.setMinPlayers(needed);
+                    gameManager.saveArena(arena);
+                    sender.sendMessage(Component.text("Players needed for '" + arenaName + "' set to " + needed + ".", NamedTextColor.GREEN));
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(Component.text("Invalid number: " + args[3], NamedTextColor.RED));
+                }
+            }, () -> {
+                sender.sendMessage(Component.text("Arena '" + arenaName + "' not fully set up yet! Set its bounds first.", NamedTextColor.RED));
+            });
             return true;
         }
 
@@ -293,13 +334,17 @@ public class SpleefCommand implements TabExecutor {
                 if (gs == GameState.ACTIVE) {
                     // Match in progress - red
                     sender.sendMessage(Component.text("- " + arena.getName() + " [MATCH IN PROGRESS]", NamedTextColor.RED)
-                            .append(Component.text(" (" + game.getAlivePlayers().size() + "/" + game.getPlayers().size() + ")", NamedTextColor.GRAY)));
+                            .append(Component.text(" (" + game.getAlivePlayers().size() + "/" + game.getPlayers().size() + ")", NamedTextColor.GRAY))
+                            .append(Component.text(" [" + arena.getGameType().toUpperCase() + "]", NamedTextColor.GRAY)));
                 } else {
                     // Waiting for players - yellow
-                    sender.sendMessage(Component.text("- " + arena.getName() + " [" + game.getPlayers().size() + "/2]", NamedTextColor.YELLOW));
+                    int needed = arena.getMinPlayers();
+                    sender.sendMessage(Component.text("- " + arena.getName() + " [" + game.getPlayers().size() + "/" + needed + "]", NamedTextColor.YELLOW)
+                            .append(Component.text(" [" + arena.getGameType().toUpperCase() + "]", NamedTextColor.GRAY)));
                 }
             } else {
-                sender.sendMessage(Component.text("- " + arena.getName() + " [READY]", NamedTextColor.GREEN));
+                sender.sendMessage(Component.text("- " + arena.getName() + " [READY]", NamedTextColor.GREEN)
+                        .append(Component.text(" [" + arena.getGameType().toUpperCase() + "]", NamedTextColor.GRAY)));
             }
         }
 
@@ -339,7 +384,7 @@ public class SpleefCommand implements TabExecutor {
         }
         if (args.length == 2) {
             if (args[0].equalsIgnoreCase("arena")) {
-                return Arrays.asList("create", "pos1", "pos2", "addspawn").stream()
+                return Arrays.asList("create", "pos1", "pos2", "addspawn", "type", "players-needed").stream()
                         .filter(s -> s.startsWith(args[1].toLowerCase()))
                         .collect(Collectors.toList());
             }
@@ -360,10 +405,15 @@ public class SpleefCommand implements TabExecutor {
             if (args[1].equalsIgnoreCase("create")) {
                 return new ArrayList<>();
             }
-            // Suggest created arena names for pos1/pos2/addspawn
+            // Suggest arena names for pos1/pos2/addspawn/type/players-needed
             return gameManager.getArenas().stream()
                     .map(Arena::getName)
                     .filter(s -> s.startsWith(args[2].toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("arena") && args[1].equalsIgnoreCase("type")) {
+            return Arrays.asList("ffa", "solos", "duos", "trios", "quads").stream()
+                    .filter(s -> s.startsWith(args[3].toLowerCase()))
                     .collect(Collectors.toList());
         }
         return new ArrayList<>();

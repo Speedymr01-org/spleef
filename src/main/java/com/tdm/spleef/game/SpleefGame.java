@@ -85,8 +85,9 @@ public class SpleefGame {
     }
 
     public void start() {
-        if (players.size() < 2) {
-            broadcast(Component.text("Need at least 2 players to start!", NamedTextColor.RED));
+        int needed = arena.getMinPlayers();
+        if (players.size() < needed) {
+            broadcast(Component.text("Need at least " + needed + " players to start!", NamedTextColor.RED));
             return;
         }
 
