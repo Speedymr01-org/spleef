@@ -24,6 +24,7 @@ public class SpleefGame {
     private final List<Player> alivePlayers;
     private final List<GameTeam> teams;
     private final Set<Location> brokenBlocks;
+    private final Map<UUID, Location> playerGlass;
     private GameState state;
     private int taskId;
     private int startedPlayerCount;
@@ -38,6 +39,7 @@ public class SpleefGame {
         this.players = new ArrayList<>();
         this.alivePlayers = new ArrayList<>();
         this.brokenBlocks = new HashSet<>();
+        this.playerGlass = new HashMap<>();
         this.teams = new ArrayList<>();
         this.state = GameState.WAITING;
         this.taskId = -1;
@@ -82,17 +84,35 @@ public class SpleefGame {
             return false;
         }
 
+        int maxPlayers = arena.getMinPlayers();
+        if (players.size() >= maxPlayers) {
+            player.sendMessage(Component.text("Game is full (" + maxPlayers + "/" + maxPlayers + ")!", NamedTextColor.RED));
+            return false;
+        }
+
         boolean wasEmpty = players.isEmpty();
 
         players.add(player);
         alivePlayers.add(player);
-        player.teleport(arena.getSpawnLocation(players.size() - 1));
+        Location spawn = arena.getSpawnLocation(players.size() - 1);
+        player.teleport(spawn);
         player.sendMessage(Component.text("You joined the Spleef game!", NamedTextColor.GREEN));
-        broadcast(Component.text(player.getName() + " joined the game! (" + players.size() + " players)", NamedTextColor.YELLOW));
+        broadcast(Component.text(player.getName() + " joined the game! (" + players.size() + "/" + maxPlayers + ")", NamedTextColor.YELLOW));
 
         // Fill the arena floor with snow when the first player joins
         if (wasEmpty) {
             arena.fillFloor();
+        }
+
+        // Place a glass block under the player so they have a platform to stand on
+        Location glassLoc = new Location(spawn.getWorld(), spawn.getBlockX(), arena.getMinY(), spawn.getBlockZ());
+        if (arena.isWithinBounds(glassLoc)) {
+            Block glassBlock = glassLoc.getBlock();
+            if (glassBlock.getType() != Material.GLASS) {
+                glassBlock.setType(Material.GLASS);
+                glassBlock.getState().update(false, false);
+            }
+            playerGlass.put(player.getUniqueId(), glassLoc.clone());
         }
 
         return true;
@@ -105,12 +125,38 @@ public class SpleefGame {
             GameTeam team = GameTeam.getPlayerTeam(teams, player);
             if (team != null) team.removeMember(player);
         }
+
+        // Remove the player's glass block if present
+        removePlayerGlass(player);
+
         player.sendMessage(Component.text("You left the Spleef game.", NamedTextColor.GRAY));
         broadcast(Component.text(player.getName() + " left the game.", NamedTextColor.YELLOW));
 
-        if (players.isEmpty() && state == GameState.WAITING) {
+        if (players.isEmpty() && (state == GameState.WAITING || state == GameState.COUNTDOWN)) {
             stop();
         }
+    }
+
+    private void removePlayerGlass(Player player) {
+        Location glassLoc = playerGlass.remove(player.getUniqueId());
+        if (glassLoc != null) {
+            Block block = glassLoc.getBlock();
+            if (block.getType() == Material.GLASS) {
+                block.setType(Material.AIR);
+                block.getState().update(false, false);
+            }
+        }
+    }
+
+    private void removeAllGlassBlocks() {
+        for (Location loc : playerGlass.values()) {
+            Block block = loc.getBlock();
+            if (block.getType() == Material.GLASS) {
+                block.setType(Material.AIR);
+                block.getState().update(false, false);
+            }
+        }
+        playerGlass.clear();
     }
 
     public void start() {
@@ -169,6 +215,9 @@ public class SpleefGame {
                 broadcast(team.getDisplayName().append(Component.text(": " + memberList.toString(), NamedTextColor.WHITE)));
             }
         }
+
+        // Remove glass platforms so players drop onto the snow
+        removeAllGlassBlocks();
 
         broadcast(Component.text("GO! Break the snow beneath other players!", NamedTextColor.GOLD));
 
@@ -253,6 +302,7 @@ public class SpleefGame {
                 player.teleport(plugin.getServer().getWorlds().get(0).getSpawnLocation());
                 player.getInventory().clear();
             }
+            removeAllGlassBlocks();
             players.clear();
             alivePlayers.clear();
             teams.clear();
@@ -274,6 +324,7 @@ public class SpleefGame {
             }
         }
         restoreBlocks();
+        removeAllGlassBlocks();
         arena.clearFloor();
         players.clear();
         alivePlayers.clear();
