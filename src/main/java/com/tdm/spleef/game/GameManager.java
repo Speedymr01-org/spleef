@@ -111,6 +111,10 @@ public class GameManager {
         return activeGames.values();
     }
 
+    public Set<String> getPendingArenas() {
+        return Collections.unmodifiableSet(pendingArenas);
+    }
+
     public boolean isPlayerInGame(Player player) {
         return activeGames.values().stream().anyMatch(g -> g.getPlayers().contains(player));
     }

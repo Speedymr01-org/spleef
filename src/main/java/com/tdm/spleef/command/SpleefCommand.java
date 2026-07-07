@@ -273,28 +273,32 @@ public class SpleefCommand implements TabExecutor {
 
     private boolean handleList(CommandSender sender) {
         sender.sendMessage(Component.text("=== Arenas ===", NamedTextColor.GOLD));
-        if (gameManager.getArenas().isEmpty()) {
-            sender.sendMessage(Component.text("No arenas configured.", NamedTextColor.GRAY));
-        } else {
-            for (Arena arena : gameManager.getArenas()) {
-                boolean hasActive = gameManager.getGame(arena.getName()).isPresent();
-                Component status = hasActive
-                        ? Component.text(" [ACTIVE]", NamedTextColor.GREEN)
-                        : Component.text(" [INACTIVE]", NamedTextColor.GRAY);
-                sender.sendMessage(Component.text("- " + arena.getName(), NamedTextColor.WHITE).append(status));
+
+        boolean anyFound = false;
+
+        // Pending arenas (bounds not set yet) - blue
+        for (String name : gameManager.getPendingArenas()) {
+            anyFound = true;
+            sender.sendMessage(Component.text("- " + name + " [BOUNDS NOT SET]", NamedTextColor.BLUE));
+        }
+
+        // Fully created arenas
+        for (Arena arena : gameManager.getArenas()) {
+            anyFound = true;
+            boolean hasActive = gameManager.getGame(arena.getName()).isPresent();
+            if (hasActive) {
+                SpleefGame game = gameManager.getGame(arena.getName()).get();
+                sender.sendMessage(Component.text("- " + arena.getName() + " [MATCH IN PROGRESS]", NamedTextColor.RED)
+                        .append(Component.text(" (" + game.getAlivePlayers().size() + "/" + game.getPlayers().size() + ")", NamedTextColor.GRAY)));
+            } else {
+                sender.sendMessage(Component.text("- " + arena.getName() + " [READY]", NamedTextColor.GREEN));
             }
         }
 
-        sender.sendMessage(Component.text("=== Active Games ===", NamedTextColor.GOLD));
-        if (gameManager.getActiveGames().isEmpty()) {
-            sender.sendMessage(Component.text("No active games.", NamedTextColor.GRAY));
-        } else {
-            for (SpleefGame game : gameManager.getActiveGames()) {
-                sender.sendMessage(Component.text("- " + game.getArena().getName()
-                        + " (" + game.getAlivePlayers().size() + "/" + game.getPlayers().size() + " players)",
-                        NamedTextColor.WHITE));
-            }
+        if (!anyFound) {
+            sender.sendMessage(Component.text("No arenas configured.", NamedTextColor.GRAY));
         }
+
         return true;
     }
 
