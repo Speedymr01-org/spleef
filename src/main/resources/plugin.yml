@@ -8,7 +8,7 @@ description: Classic Spleef minigame for Paper
 commands:
   spleef:
     description: Main Spleef command
-    usage: /<command> [join|leave|start|stop|setarena]
+    usage: /<command> [join|leave|start|stop|arena|list|info]
     aliases: [sp]
 
 permissions:

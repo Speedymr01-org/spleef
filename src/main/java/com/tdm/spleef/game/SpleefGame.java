@@ -25,7 +25,6 @@ public class SpleefGame {
     private final List<Player> players;
     private final List<Player> alivePlayers;
     private final List<GameTeam> teams;
-    private final Set<Location> brokenBlocks;
     private final Map<UUID, Location> playerGlass;
     private final Map<UUID, Location> previousLocations;
     private Map<Location, BlockData> arenaSnapshot;
@@ -42,7 +41,6 @@ public class SpleefGame {
         this.arena = arena;
         this.players = new ArrayList<>();
         this.alivePlayers = new ArrayList<>();
-        this.brokenBlocks = new HashSet<>();
         this.playerGlass = new HashMap<>();
         this.previousLocations = new HashMap<>();
         this.arenaSnapshot = null;
@@ -410,22 +408,10 @@ public class SpleefGame {
         if (block.getType() != Material.AIR) {
             block.setType(Material.AIR);
             block.getState().update(false, false);
-            brokenBlocks.add(block.getLocation());
 
             // Give the player a snowball for every block broken
             player.getInventory().addItem(new ItemStack(Material.SNOWBALL));
         }
-    }
-
-    private void restoreBlocks() {
-        for (Location loc : brokenBlocks) {
-            Block block = loc.getBlock();
-            if (block.getType() == Material.AIR) {
-                block.setType(Material.SNOW_BLOCK);
-                block.getState().update(false, false);
-            }
-        }
-        brokenBlocks.clear();
     }
 
     private void broadcast(Component message) {
