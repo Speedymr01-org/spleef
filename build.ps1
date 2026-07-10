@@ -4,7 +4,14 @@ if (-not $env:JAVA_HOME) {
     $env:JAVA_HOME = "C:\Users\Matthew\OneDrive\Desktop\mc-plugins\jdk25"
 }
 
-mvn clean package
+$mvnArgs = @("clean", "package")
+
+# Suppress download progress bars in CI (GitHub Actions)
+if ($env:CI) {
+    $mvnArgs += "--no-transfer-progress"
+}
+
+mvn $mvnArgs
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`nBuild successful!" -ForegroundColor Green
