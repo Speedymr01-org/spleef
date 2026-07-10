@@ -3,6 +3,7 @@ package com.tdm.spleef;
 import com.tdm.spleef.command.SpleefCommand;
 import com.tdm.spleef.game.GameManager;
 import com.tdm.spleef.listener.GameListener;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class SpleefPlugin extends JavaPlugin {
@@ -12,6 +13,10 @@ public class SpleefPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+
+        // bStats
+        int pluginId = 32518;
+        Metrics metrics = new Metrics(this, pluginId);
 
         this.gameManager = new GameManager(this);
 
