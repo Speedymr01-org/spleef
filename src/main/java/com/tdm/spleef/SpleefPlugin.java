@@ -1,5 +1,6 @@
 package com.tdm.spleef;
 
+import com.tdm.spleef.api.SpleefAPI;
 import com.tdm.spleef.command.SpleefCommand;
 import com.tdm.spleef.game.GameManager;
 import com.tdm.spleef.listener.GameListener;
@@ -22,6 +23,11 @@ public class SpleefPlugin extends JavaPlugin {
 
         getCommand("spleef").setExecutor(new SpleefCommand(this, gameManager));
         getServer().getPluginManager().registerEvents(new GameListener(this, gameManager), this);
+
+        // Register unofficial API for other plugins (e.g. tournament)
+        SpleefAPI spleefAPI = new SpleefAPI(this, gameManager);
+        getServer().getServicesManager().register(SpleefAPI.class, spleefAPI, this, org.bukkit.plugin.ServicePriority.Normal);
+        getLogger().info("Registered SpleefAPI for external plugins");
 
         getLogger().info("Spleef v" + getDescription().getVersion() + " enabled!");
     }
