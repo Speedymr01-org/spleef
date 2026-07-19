@@ -10,6 +10,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class SpleefPlugin extends JavaPlugin {
 
     private GameManager gameManager;
+    private SpleefMinigameProvider provider;
 
     @Override
     public void onEnable() {
@@ -29,15 +30,33 @@ public class SpleefPlugin extends JavaPlugin {
         getServer().getServicesManager().register(SpleefAPI.class, spleefAPI, this, org.bukkit.plugin.ServicePriority.Normal);
         getLogger().info("Registered SpleefAPI for external plugins");
 
+        // Register TournamentManager MinigameProvider (if TournamentManager is installed)
+        if (isTournamentManagerInstalled()) {
+            this.provider = new SpleefMinigameProvider(this, spleefAPI);
+            this.provider.register();
+        }
+
         getLogger().info("Spleef v" + getDescription().getVersion() + " enabled!");
     }
 
     @Override
     public void onDisable() {
+        if (provider != null) {
+            provider.unregister();
+        }
         if (gameManager != null) {
             gameManager.stopAllGames();
         }
         getLogger().info("Spleef disabled!");
+    }
+
+    private boolean isTournamentManagerInstalled() {
+        try {
+            Class.forName("com.tdm.tournament.api.MinigameProvider");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     public GameManager getGameManager() {
