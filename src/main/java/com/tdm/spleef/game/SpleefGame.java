@@ -121,6 +121,9 @@ public class SpleefGame {
             playerGlass.put(player.getUniqueId(), glassLoc.clone());
         }
 
+        // Fire API event
+        plugin.getServer().getPluginManager().callEvent(new com.tdm.spleef.api.event.SpleefPlayerJoinEvent(player, this));
+
         return true;
     }
 
@@ -134,6 +137,11 @@ public class SpleefGame {
 
         // Remove the player's glass block if present
         removePlayerGlass(player);
+
+        // Fire API event before teleporting back
+        plugin.getServer().getPluginManager().callEvent(
+                new com.tdm.spleef.api.event.SpleefPlayerLeaveEvent(player, this,
+                        com.tdm.spleef.api.event.SpleefPlayerLeaveEvent.LeaveReason.LEAVE));
 
         // Teleport the player back to where they were before joining
         teleportBack(player);
@@ -282,6 +290,9 @@ public class SpleefGame {
             player.setSaturation(10);
             player.setHealth(20);
         }
+
+        // Fire API event
+        plugin.getServer().getPluginManager().callEvent(new com.tdm.spleef.api.event.SpleefGameStartEvent(this));
     }
 
     /**
@@ -322,6 +333,12 @@ public class SpleefGame {
             broadcast(Component.text(player.getName() + " has been eliminated!", NamedTextColor.RED));
         }
 
+        // Determine if the entire team was eliminated (only relevant for team games)
+        boolean teamEliminated = isTeamGame() && GameTeam.getPlayerTeam(teams, player) != null
+                && !GameTeam.getPlayerTeam(teams, player).isAlive();
+        plugin.getServer().getPluginManager().callEvent(
+                new com.tdm.spleef.api.event.SpleefPlayerEliminateEvent(player, this, teamEliminated));
+
         int aliveTeamCount = isTeamGame() ? (int) teams.stream().filter(GameTeam::isAlive).count() : alivePlayers.size();
         if (aliveTeamCount <= 1) {
             endGame();
@@ -352,6 +369,28 @@ public class SpleefGame {
             broadcast(Component.text("Game ended! No winners this round.", NamedTextColor.GRAY));
         }
 
+        // Build winners list for API event
+        java.util.List<Player> winners = new java.util.ArrayList<>();
+        if (isTeamGame()) {
+            List<GameTeam> aliveTeams = teams.stream().filter(GameTeam::isAlive).toList();
+            if (aliveTeams.size() == 1) {
+                winners.addAll(aliveTeams.get(0).getMembers());
+            }
+        } else if (alivePlayers.size() == 1) {
+            winners.add(alivePlayers.get(0));
+        }
+
+        // Fire API event
+        plugin.getServer().getPluginManager().callEvent(
+                new com.tdm.spleef.api.event.SpleefGameEndEvent(this, winners, GameState.FINISHED));
+
+        // Fire leave events for all players before cleanup
+        for (Player p : players) {
+            plugin.getServer().getPluginManager().callEvent(
+                    new com.tdm.spleef.api.event.SpleefPlayerLeaveEvent(p, this,
+                            com.tdm.spleef.api.event.SpleefPlayerLeaveEvent.LeaveReason.GAME_END));
+        }
+
         // Restore the arena to pre-game state and kick players out
         plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
             for (Player player : players) {
@@ -379,6 +418,15 @@ public class SpleefGame {
                 player.getInventory().clear();
             }
         }
+        // Fire API events before clearing data
+        for (Player p : players) {
+            plugin.getServer().getPluginManager().callEvent(
+                    new com.tdm.spleef.api.event.SpleefPlayerLeaveEvent(p, this,
+                            com.tdm.spleef.api.event.SpleefPlayerLeaveEvent.LeaveReason.GAME_END));
+        }
+        plugin.getServer().getPluginManager().callEvent(
+                new com.tdm.spleef.api.event.SpleefGameEndEvent(this, java.util.Collections.emptyList(), GameState.FINISHED));
+
         teleportAllBack();
         restoreArenaSnapshot();
         players.clear();
