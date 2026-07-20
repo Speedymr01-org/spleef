@@ -62,4 +62,14 @@ public class SpleefPlugin extends JavaPlugin {
     public GameManager getGameManager() {
         return gameManager;
     }
+
+    /**
+     * Log a verbose diagnostic message (prefixed with [VERBOSE]).
+     * Controlled by {@code verbose-logging} in config.yml.
+     */
+    public void verbose(String message) {
+        if (getConfig().getBoolean("verbose-logging", true)) {
+            getLogger().info("[VERBOSE] " + message);
+        }
+    }
 }

@@ -30,6 +30,9 @@ public class SpleefMinigameProvider implements MinigameProvider, Listener {
     // Maps tournament match IDs to arena + team info so we can fire MatchCompleteEvent
     private final Map<String, MatchContext> activeMatches = new HashMap<>();
 
+    // When true, game end event should be ignored (cleanup from failed createMatch)
+    private volatile boolean endingForCleanup = false;
+
     public SpleefMinigameProvider(SpleefPlugin plugin, SpleefAPI api) {
         this.plugin = plugin;
         this.api = api;
@@ -78,39 +81,79 @@ public class SpleefMinigameProvider implements MinigameProvider, Listener {
 
     @Override
     public boolean createMatch(String arena, List<UUID> team1, List<UUID> team2, String matchId) {
-        // Find the arena
-        var arenaOpt = api.getArena(arena);
-        if (arenaOpt.isEmpty()) return false;
+        plugin.verbose("createMatch called: arena=" + arena + " matchId=" + matchId
+                + " team1=" + team1.size() + " players, team2=" + team2.size() + " players");
 
+        // Step 1: Find the arena
+        var arenaOpt = api.getArena(arena);
+        if (arenaOpt.isEmpty()) {
+            plugin.verbose("createMatch: FAILED — arena '" + arena + "' not found");
+            return false;
+        }
         Arena a = arenaOpt.get();
 
-        // Create the game on the arena
+        // Step 2: Create the game on the arena
+        plugin.verbose("createMatch: creating game on arena '" + arena + "'");
         SpleefGame game = api.createGame(a);
-        if (game == null) return false;
-
-        // Add all players from both teams
-        List<Player> allPlayers = new ArrayList<>();
-        for (UUID uid : team1) {
-            Player p = Bukkit.getPlayer(uid);
-            if (p != null && p.isOnline()) {
-                game.addPlayer(p);
-                allPlayers.add(p);
-            }
-        }
-        for (UUID uid : team2) {
-            Player p = Bukkit.getPlayer(uid);
-            if (p != null && p.isOnline()) {
-                game.addPlayer(p);
-                allPlayers.add(p);
-            }
+        if (game == null) {
+            plugin.verbose("createMatch: FAILED — api.createGame returned null");
+            return false;
         }
 
-        // Store match context for later result mapping
-        activeMatches.put(matchId, new MatchContext(arena, team1, team2, allPlayers));
+        boolean needCleanup = true;
 
-        // Start the game
-        game.start();
-        return true;
+        try {
+            // Step 3: Add all players from both teams
+            List<Player> allPlayers = new ArrayList<>();
+            for (UUID uid : team1) {
+                Player p = Bukkit.getPlayer(uid);
+                boolean found = (p != null && p.isOnline());
+                plugin.verbose("createMatch: team1 player uid=" + uid + " found=" + found + " name=" + (p != null ? p.getName() : "N/A"));
+                if (found) {
+                    game.addPlayer(p);
+                    allPlayers.add(p);
+                }
+            }
+            for (UUID uid : team2) {
+                Player p = Bukkit.getPlayer(uid);
+                boolean found = (p != null && p.isOnline());
+                plugin.verbose("createMatch: team2 player uid=" + uid + " found=" + found + " name=" + (p != null ? p.getName() : "N/A"));
+                if (found) {
+                    game.addPlayer(p);
+                    allPlayers.add(p);
+                }
+            }
+
+            plugin.verbose("createMatch: " + allPlayers.size() + " total players joined");
+
+            if (allPlayers.isEmpty()) {
+                plugin.verbose("createMatch: FAILED — no players joined");
+                return false;
+            }
+
+            // Step 4: Store match context for later result mapping
+            activeMatches.put(matchId, new MatchContext(arena, team1, team2, allPlayers));
+
+            // Step 5: Start the game
+            plugin.verbose("createMatch: starting game...");
+            game.start();
+            plugin.verbose("createMatch: SUCCESS — match " + matchId + " started on arena '" + arena + "'");
+            needCleanup = false;
+            return true;
+        } finally {
+            // If we created the game but something failed, stop it so next attempt can work
+            if (needCleanup) {
+                plugin.verbose("createMatch: cleaning up — stopping spleef game after failed match start");
+                endingForCleanup = true;
+                try {
+                    api.getGame(arena).ifPresent(SpleefGame::stop);
+                    api.removeGame(game);
+                } finally {
+                    endingForCleanup = false;
+                }
+                activeMatches.remove(matchId);
+            }
+        }
     }
 
     @Override
@@ -126,6 +169,9 @@ public class SpleefMinigameProvider implements MinigameProvider, Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onSpleefGameEnd(SpleefGameEndEvent event) {
+        // Ignore game-end events triggered by cleanup of a failed createMatch
+        if (endingForCleanup) return;
+
         String arenaName = event.getGame().getArena().getName();
 
         // Find which of our tracked matches matches this arena
@@ -139,7 +185,10 @@ public class SpleefMinigameProvider implements MinigameProvider, Listener {
             }
         }
 
-        if (matchId == null || ctx == null) return;
+        if (matchId == null || ctx == null) {
+            plugin.verbose("onSpleefGameEnd: no active match for arena '" + arenaName + "', ignoring");
+            return;
+        }
         activeMatches.remove(matchId);
 
         // Determine winners

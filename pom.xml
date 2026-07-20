@@ -41,9 +41,9 @@
 
         <!-- Tournament Manager API (optional) -->
         <dependency>
-    <groupId>com.Speedymr01</groupId>
+            <groupId>com.tdm</groupId>
             <artifactId>tournament-manager</artifactId>
-            <version>0.1.0</version>
+            <version>0.2.0</version>
             <scope>provided</scope>
         </dependency>
 
