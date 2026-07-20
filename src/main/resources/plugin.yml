@@ -1,6 +1,6 @@
 name: Spleef
 version: ${project.version}
-main: com.tdm.spleef.SpleefPlugin
+main: com.Speedymr01.spleef.SpleefPlugin
 api-version: '1.21'
 author: Speedymr01
 description: Classic Spleef minigame for Paper
