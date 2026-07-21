@@ -18,6 +18,9 @@ if (-not $env:CI) {
 
 mvn $mvnArgs
 
+# Remove the non-shaded original JAR to avoid accidentally deploying it
+Remove-Item -Path "target\original-*.jar" -Force -ErrorAction SilentlyContinue
+
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`nBuild successful!" -ForegroundColor Green
     exit 0

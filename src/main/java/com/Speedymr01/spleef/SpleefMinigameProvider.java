@@ -6,6 +6,9 @@ import com.Speedymr01.spleef.arena.Arena;
 import com.Speedymr01.spleef.game.SpleefGame;
 import com.tdm.tournament.api.MatchCompleteEvent;
 import com.tdm.tournament.api.MinigameProvider;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -13,6 +16,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.ServicePriority;
 
 import java.util.*;
@@ -201,6 +207,69 @@ public class SpleefMinigameProvider implements MinigameProvider, Listener {
         MatchCompleteEvent completeEvent = new MatchCompleteEvent(
                 getPluginName(), matchId, winnerUuids, arenaName, tie);
         Bukkit.getPluginManager().callEvent(completeEvent);
+    }
+
+    // ==================== Config Menu ====================
+
+    @Override
+    public void openConfigMenu(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27,
+                Component.text("Spleef Config", NamedTextColor.DARK_AQUA));
+
+        inv.setItem(11, makeBoolItem("verbose-logging", "Verbose Logging"));
+
+        inv.setItem(26, makeItem(Material.ARROW, Component.text("Back", NamedTextColor.YELLOW)));
+
+        player.openInventory(inv);
+        plugin.setGuiHandler(player.getUniqueId(), (p, s) -> {
+            if (s == 26) {
+                player.closeInventory();
+                return true;
+            }
+            switch (s) {
+                case 11:
+                    toggleBoolAndSave(player, "verbose-logging");
+                    break;
+                default:
+                    return false;
+            }
+            return true;
+        });
+    }
+
+    private ItemStack makeBoolItem(String path, String label) {
+        boolean value = plugin.getConfig().getBoolean(path, false);
+        Material mat = value ? Material.GREEN_CONCRETE : Material.RED_CONCRETE;
+        return makeItem(mat,
+                Component.text(label, NamedTextColor.WHITE, TextDecoration.BOLD),
+                Component.text("Current: ", NamedTextColor.GRAY)
+                        .append(Component.text(value ? "ON" : "OFF", value ? NamedTextColor.GREEN : NamedTextColor.RED)),
+                Component.text("Options: ON / OFF", NamedTextColor.GRAY),
+                Component.text("Click to toggle", NamedTextColor.DARK_GRAY));
+    }
+
+    private void toggleBoolAndSave(Player player, String path) {
+        boolean current = plugin.getConfig().getBoolean(path, false);
+        boolean newValue = !current;
+        plugin.getConfig().set(path, newValue);
+        plugin.saveConfig();
+        plugin.reloadConfig();
+        plugin.loadConfigSettings();
+        player.sendMessage(Component.text(path + " = " + newValue, NamedTextColor.GREEN));
+        openConfigMenu(player);
+    }
+
+    private ItemStack makeItem(Material material, Component name, Component... lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(name);
+            if (lore.length > 0) {
+                meta.lore(Arrays.asList(lore));
+            }
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 
     // ==================== Context ====================
