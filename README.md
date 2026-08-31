@@ -83,7 +83,7 @@ All commands use the `/spleef` namespace. Admin commands require `spleef.admin` 
 
 ## Installation
 
-1. Download the JAR from [Modrinth](https://modrinth.com/plugin/spleef-paper/versions) or [GitHub Releases](https://github.com/Speedymr01/spleef/releases)
+1. Download the JAR from [Modrinth](https://modrinth.com/plugin/spleef-paper/versions) or [GitHub Releases](https://github.com/Speedymr01-org/spleef/releases)
 2. Place in your server's `plugins/` folder
 3. Restart the server (or `/reload`)
 4. Configure arenas using `/spleef arena create`
@@ -91,7 +91,7 @@ All commands use the `/spleef` namespace. Admin commands require `spleef.admin` 
 ## Building from Source
 
 ```bash
-git clone https://github.com/Speedymr01/spleef.git
+git clone https://github.com/Speedymr01-org/spleef.git
 cd spleef
 ./build.bat   # Windows
 # or
