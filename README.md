@@ -13,6 +13,7 @@ A classic Spleef minigame plugin for Paper Minecraft servers. Break snow beneath
 - **Glass platforms** — Players stand on glass above the snow floor; platforms removed at start
 - **Player freeze** — Horizontal movement locked during lobby/countdown (jumping allowed)
 - **Auto floor fill** — Snow floor auto-generates on first join, clears on last leave
+- **Tournament support** — Registers as a [TournamentManager](https://modrinth.com/plugin/tournament-manager) provider, and shows a clickable link to it in chat when a game ends (toggle with `tournament-link` in `config.yml`)
 
 ## Commands
 

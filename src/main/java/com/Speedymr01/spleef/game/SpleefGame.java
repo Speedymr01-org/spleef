@@ -1,6 +1,7 @@
 package com.Speedymr01.spleef.game;
 
 import com.Speedymr01.spleef.SpleefPlugin;
+import com.Speedymr01.spleef.TournamentLink;
 import com.Speedymr01.spleef.arena.Arena;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -367,6 +368,11 @@ public class SpleefGame {
             broadcast(Component.text("The game ended in a tie!", NamedTextColor.GRAY));
         } else {
             broadcast(Component.text("Game ended! No winners this round.", NamedTextColor.GRAY));
+        }
+
+        // Point players at TournamentManager (clickable link) after a completed game
+        if (plugin.getConfig().getBoolean("tournament-link", true)) {
+            broadcast(TournamentLink.chatMessage());
         }
 
         // Build winners list for API event

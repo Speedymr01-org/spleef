@@ -2,3 +2,7 @@
 
 # Enable verbose diagnostic logging for tournament integration debugging
 verbose-logging: true
+
+# Show a clickable link to TournamentManager (https://modrinth.com/plugin/tournament-manager)
+# in chat when a game ends. The same link is printed to the console on startup.
+tournament-link: true

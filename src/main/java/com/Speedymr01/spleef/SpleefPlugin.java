@@ -76,6 +76,7 @@ public class SpleefPlugin extends JavaPlugin {
         }
 
         getLogger().info("Spleef v" + getDescription().getVersion() + " enabled!");
+        getLogger().info(TournamentLink.consoleMessage());
     }
 
     private static SpleefPlugin instance;
